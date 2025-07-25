@@ -1,0 +1,787 @@
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+font-family: 'Arial', sans-serif;
+}
+
+body {
+background-color: #f5f5f5;
+transition: margin-left 0.3s;
+}
+
+.header {
+background-color: rgb(0 0 0 / 88%);
+color: #ecf0f1;
+padding: 1rem 2rem;
+display: flex;
+align-items: center;
+height: 80px;
+box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.menu-btn {
+background: none;
+border: none;
+cursor: pointer;
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+height: 24px;
+width: 30px;
+margin-right: 20px;
+padding: 0;
+}
+
+.menu-btn span {
+display: block;
+width: 100%;
+height: 3px;
+background-color: #ecf0f1;
+transition: all 0.3s;
+}
+
+.title {
+font-size: 1.8rem;
+font-weight: 500;
+}
+
+.sidebar {
+position: fixed;
+top: 0;
+left: -250px;
+width: 250px;
+height: 100%;
+background-color: rgb(0 0 0 / 88%);
+color: #ecf0f1;
+transition: left 0.3s;
+z-index: 100;
+padding-top: 80px;
+}
+
+.sidebar.active {
+left: 0;
+}
+
+.menu-title {
+padding: 1.5rem 1.5rem 0.5rem;
+font-size: 1.3rem;
+border-bottom: 1px solid #4a6278;
+margin-bottom: 1rem;
+}
+
+.menu-list {
+list-style: none;
+}
+
+.menu-list li a {
+display: block;
+padding: 1rem 1.5rem;
+color: #ecf0f1;
+text-decoration: none;
+transition: background-color 0.3s;
+}
+
+.menu-list li a:hover {
+background-color: #3d566e;
+}
+
+.has-submenu {
+position: relative;
+}
+
+.submenu-toggle {
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+.submenu-toggle .arrow {
+font-size: 0.8rem;
+transition: transform 0.3s;
+}
+
+.submenu {
+list-style: none;
+max-height: 0;
+overflow: hidden;
+transition: max-height 0.3s ease-out;
+padding-left: 1.5rem;
+background-color: #23375A;
+border-radius: 0 0 4px 4px;
+}
+
+.submenu.active {
+max-height: 500px;
+transition: max-height 0.5s ease-in;
+}
+
+.submenu li a {
+padding: 0.8rem 1.5rem;
+display: block;
+color: #ecf0f1;
+text-decoration: none;
+transition: background-color 0.3s;
+}
+
+.submenu li a:hover {
+background-color: #3d566e;
+}
+
+.has-submenu.active .arrow {
+transform: rotate(180deg);
+}
+
+.main-content {
+margin-left: 0;
+padding: 2rem;
+transition: margin-left 0.3s;
+}
+
+.main-content.shifted {
+margin-left: 250px;
+}
+
+.content-section {
+display: none;
+padding: 2rem;
+animation: fadeIn 0.5s ease;
+}
+
+.content-section.active {
+display: block;
+}
+
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(10px); }
+to { opacity: 1; transform: translateY(0); }
+}
+
+.resumen-container {
+background-color: #23375A;
+padding: 1.5rem;
+border-radius: 8px;
+color: #ecf0f1;
+box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.resumen-info {
+margin-top: 1rem;
+}
+
+.info-item {
+display: flex;
+margin-bottom: 0.8rem;
+align-items: center;
+}
+
+.info-label {
+font-weight: bold;
+width: 80px;
+}
+
+.info-value {
+padding: 0.3rem 0.6rem;
+background-color: #2c3e50;
+border-radius: 4px;
+flex-grow: 1;
+}
+
+.form-container {
+background-color: #23375A;
+padding: 1.5rem;
+border-radius: 8px;
+color: #ecf0f1;
+max-width: 500px;
+margin: 0 auto;
+}
+
+.form-group {
+margin-bottom: 1.2rem;
+}
+
+.form-group label {
+display: block;
+margin-bottom: 0.5rem;
+font-weight: bold;
+}
+
+.form-group input {
+width: 100%;
+padding: 0.6rem;
+border: 1px solid #4a6278;
+border-radius: 4px;
+background-color: #2c3e50;
+color: #ecf0f1;
+}
+
+.form-text {
+display: block;
+margin-top: 0.3rem;
+font-size: 0.8rem;
+color: #bdc3c7;
+}
+
+.btn-submit {
+background-color: #3498db;
+color: white;
+border: none;
+padding: 0.8rem 1.5rem;
+border-radius: 4px;
+cursor: pointer;
+font-size: 1rem;
+transition: background-color 0.3s;
+}
+
+.btn-submit:hover {
+background-color: #2980b9;
+}
+
+.funcion-container {
+background-color: #23375A;
+padding: 1.5rem;
+border-radius: 8px;
+color: #ecf0f1;
+max-width: 800px;
+margin: 0 auto;
+}
+
+.funcion-container h2 {
+margin-bottom: 1.5rem;
+border-bottom: 1px solid #23375A;
+padding-bottom: 0.5rem;
+}
+
+.btn-group {
+display: flex;
+gap: 1rem;
+margin-top: 1rem;
+flex-wrap: wrap;
+}
+
+.btn-funcion {
+background-color: #3498db;
+color: white;
+border: none;
+padding: 0.6rem 1.2rem;
+border-radius: 4px;
+cursor: pointer;
+transition: background-color 0.3s;
+}
+
+.btn-funcion:hover {
+background-color: #2980b9;
+}
+
+.i2c-resultados {
+margin-top: 1.5rem;
+padding: 1rem;
+background-color: #2c3e50;
+border-radius: 4px;
+}
+
+.devices-list {
+margin-top: 0.8rem;
+font-family: monospace;
+}
+
+.gpio-controls {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+gap: 1rem;
+margin-top: 1rem;
+}
+
+.gpio-item {
+background-color: #2c3e50;
+padding: 1rem;
+border-radius: 4px;
+}
+
+.gpio-item h4 {
+margin-bottom: 0.5rem;
+}
+
+.gpio-buttons {
+display: flex;
+gap: 0.5rem;
+}
+
+.gpio-btn {
+padding: 0.4rem 0.8rem;
+border: none;
+border-radius: 3px;
+cursor: pointer;
+}
+
+.gpio-btn.on {
+background-color: #2ecc71;
+color: white;
+}
+
+.gpio-btn.off {
+background-color: #e74c3c;
+color: white;
+}
+
+.status-indicator {
+display: inline-block;
+width: 12px;
+height: 12px;
+border-radius: 50%;
+margin-right: 5px;
+}
+
+.status-on {
+background-color: #2ecc71;
+}
+
+.status-off {
+background-color: #e74c3c;
+}
+
+/* WiFi Section Styles */
+.wifi-container {
+background-color: #23375A;
+padding: 1.5rem;
+border-radius: 8px;
+max-width: 800px;
+margin: 0 auto;
+}
+
+.wifi-controls {
+display: flex;
+flex-direction: column;
+gap: 20px;
+}
+
+.wifi-scan-section, .wifi-saved-section {
+background-color: #2c3e50;
+border-radius: 6px;
+padding: 15px;
+}
+
+.btn-scan {
+background-color: #3498db;
+color: white;
+border: none;
+padding: 8px 15px;
+border-radius: 4px;
+margin-right: 10px;
+margin-bottom: 10px;
+cursor: pointer;
+}
+
+.btn-scan.danger {
+background-color: #e74c3c;
+}
+
+.wifi-table {
+width: 100%;
+border-collapse: collapse;
+margin-top: 10px;
+}
+
+.wifi-table th {
+background-color: #3498db;
+color: white;
+padding: 10px;
+text-align: left;
+}
+
+.wifi-table td {
+padding: 10px;
+border-bottom: 1px solid #2c3e50;
+}
+
+.signal-strength {
+display: flex;
+align-items: center;
+gap: 3px;
+}
+
+.signal-bar {
+width: 5px;
+height: 15px;
+background-color: #7f8c8d;
+}
+
+.signal-bar.active {
+background-color: #2ecc71;
+}
+
+.connect-btn {
+background-color: #3498db;
+color: white;
+border: none;
+padding: 6px 12px;
+border-radius: 4px;
+cursor: pointer;
+}
+
+.saved-networks-container {
+margin-top: 10px;
+}
+
+.saved-networks-list {
+list-style: none;
+padding: 0;
+}
+
+.saved-networks-list li {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 8px;
+border-bottom: 1px solid #2c3e50;
+}
+
+.loading {
+color: #3498db;
+text-align: center;
+padding: 15px;
+}
+
+.error {
+color: #e74c3c;
+text-align: center;
+padding: 15px;
+}
+
+/* Alert and Dialog Styles */
+.alert {
+position: fixed;
+top: 20px;
+right: 20px;
+padding: 15px 20px;
+border-radius: 4px;
+color: white;
+z-index: 1000;
+animation: slideIn 0.3s forwards;
+}
+
+.alert.success {
+background-color: #27ae60;
+}
+
+.alert.error {
+background-color: #e74c3c;
+}
+
+.alert.info {
+background-color: #3498db;
+}
+
+@keyframes slideIn {
+from { transform: translateX(100%); opacity: 0; }
+to { transform: translateX(0); opacity: 1; }
+}
+
+.password-dialog,
+.confirm-dialog {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background-color: rgba(0, 0, 0, 0.7);
+display: flex;
+justify-content: center;
+align-items: center;
+z-index: 1000;
+}
+
+.dialog-content {
+background-color: #34495e;
+padding: 20px;
+border-radius: 8px;
+width: 90%;
+max-width: 400px;
+box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-content h3 {
+margin-top: 0;
+color: #ecf0f1;
+}
+
+.dialog-content input {
+width: 100%;
+padding: 10px;
+margin: 15px 0;
+border-radius: 4px;
+border: 1px solid #2c3e50;
+background-color: #2c3e50;
+color: #ecf0f1;
+}
+
+.dialog-buttons {
+display: flex;
+justify-content: flex-end;
+gap: 10px;
+}
+
+.dialog-buttons button {
+padding: 8px 16px;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+transition: background-color 0.3s;
+}
+
+#cancel-wifi,
+#cancel-action {
+background-color: #7f8c8d;
+color: white;
+}
+
+#confirm-wifi,
+#confirm-action {
+background-color: #3498db;
+color: white;
+}
+
+/* Estilos para la sección de reinicio */
+.reboot-message {
+text-align: center;
+padding: 20px;
+background-color: #2c3e50;
+border-radius: 8px;
+margin-top: 20px;
+color: #ecf0f1;
+}
+
+.loading-spinner {
+border: 5px solid #f3f3f3;
+border-top: 5px solid #3498db;
+border-radius: 50%;
+width: 50px;
+height: 50px;
+animation: spin 1s linear infinite;
+margin: 20px auto;
+}
+
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+
+.device-list {
+list-style-type: none;
+padding: 0;
+}
+
+.device-item {
+display: flex;
+justify-content: space-between;
+padding: 10px;
+border-bottom: 1px solid #4a6278;
+}
+
+.device-address {
+font-weight: bold;
+color: #3498db;
+}
+
+.device-type {
+color: #bdc3c7;
+}
+
+.no-devices, .error {
+text-align: center;
+padding: 10px;
+color: #e74c3c;
+}
+
+/* Estilos para el submenú de GPIO */
+.gpio-submenu {
+margin-top: 2rem;
+background-color: #2c3e50;
+border-radius: 8px;
+overflow: hidden;
+}
+
+.gpio-submenu .submenu-toggle {
+width: 100%;
+padding: 1rem;
+background-color: #23375A;
+border: none;
+color: #ecf0f1;
+display: flex;
+justify-content: space-between;
+align-items: center;
+cursor: pointer;
+font-size: 1.1rem;
+}
+
+.gpio-submenu .submenu-toggle .arrow {
+transition: transform 0.3s;
+}
+
+.gpio-submenu .submenu-toggle.active .arrow {
+transform: rotate(180deg);
+}
+
+.gpio-submenu .submenu-content {
+max-height: 0;
+overflow: hidden;
+transition: max-height 0.3s ease-out;
+padding: 0 1rem;
+}
+
+.gpio-submenu .submenu-content.active {
+max-height: 1000px;
+padding: 1rem;
+transition: max-height 0.5s ease-in;
+}
+
+/* Estilos para el manejo de archivos */
+.file-actions {
+margin-top: 1rem;
+padding: 1rem;
+background-color: #2c3e50;
+border-radius: 6px;
+}
+
+.file-upload-container {
+margin-top: 1rem;
+padding: 1rem;
+border: 2px dashed #4a6278;
+border-radius: 6px;
+text-align: center;
+}
+
+.upload-status {
+margin-top: 1rem;
+padding: 0.5rem;
+border-radius: 4px;
+}
+
+.upload-status.success {
+background-color: rgba(46, 204, 113, 0.2);
+color: #2ecc71;
+}
+
+.upload-status.error {
+background-color: rgba(231, 76, 60, 0.2);
+color: #e74c3c;
+}
+
+.saved-configs {
+margin-top: 1.5rem;
+}
+
+.config-list {
+margin-top: 0.5rem;
+padding: 1rem;
+background-color: #2c3e50;
+border-radius: 6px;
+max-height: 300px;
+overflow-y: auto;
+}
+
+.config-item {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 0.8rem;
+border-bottom: 1px solid #4a6278;
+}
+
+.config-item:last-child {
+border-bottom: none;
+}
+
+.config-name {
+font-weight: bold;
+}
+
+.config-date {
+font-size: 0.8rem;
+color: #bdc3c7;
+}
+
+.config-actions {
+display: flex;
+gap: 0.5rem;
+}
+
+.config-btn {
+padding: 0.3rem 0.6rem;
+border: none;
+border-radius: 3px;
+cursor: pointer;
+font-size: 0.8rem;
+}
+
+.config-btn.load {
+background-color: #3498db;
+color: white;
+}
+
+.config-btn.delete {
+background-color: #e74c3c;
+color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+.main-content.shifted {
+margin-left: 0;
+}
+
+.btn-group {
+flex-direction: column;
+}
+
+.gpio-controls {
+grid-template-columns: 1fr;
+}
+
+.content-section {
+padding: 1rem;
+}
+
+.header {
+padding: 1rem;
+}
+
+.title {
+font-size: 1.4rem;
+}
+}
+/* Botones WiFi */
+.btn-wifi {
+    background: linear-gradient(90deg, #2196f3 0%, #21cbf3 100%);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 24px;
+    margin: 4px 2px;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(33,150,243,0.15);
+    transition: background 0.2s, transform 0.2s;
+    cursor: pointer;
+}
+.btn-wifi:hover {
+    background: linear-gradient(90deg, #21cbf3 0%, #2196f3 100%);
+    transform: scale(1.05);
+}
+
+/* Botón Salir */
+.btn-salir {
+background: linear-gradient(90deg, #e53935 0%, #e35d5b 100%);
+color: #fff;
+border: none;
+border-radius: 20px;
+padding: 8px 24px;
+margin: 4px 2px;
+font-weight: bold;
+box-shadow: 0 2px 8px rgba(229,57,53,0.15);
+transition: background 0.2s, transform 0.2s;
+cursor: pointer;
+}
+.btn-salir:hover {
+background: linear-gradient(90deg, #e35d5b 0%, #e53935 100%);
+transform: scale(1.05);
+}

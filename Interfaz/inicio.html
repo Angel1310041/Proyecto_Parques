@@ -1,0 +1,187 @@
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interfaz Heltec LoRa</title>
+    <link rel="stylesheet" href="Estilo.css">
+    </head>
+    <body>
+    <header class="header">
+    <button class="menu-btn" id="menu-btn">
+    <span></span>
+    <span></span>
+    <span></span>
+    </button>
+    <h1 class="title">Configuración Heltec</h1>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+    <h2 class="menu-title">Menu</h2>
+    <ul class="menu-list">
+    <li><a href="#" data-section="inicio">Inicio</a></li>
+    <li><a href="#" data-section="datos">Datos</a></li>
+    <li class="has-submenu">
+    <a href="#" data-section="funciones" class="submenu-toggle">Funciones <span class="arrow">▼</span></a>
+    <ul class="submenu">
+    <li><a href="#" data-section="pantalla">Pantalla</a></li>
+    <li><a href="#" data-section="wifi">WiFi</a></li>
+    <li><a href="#" data-section="uart">UART</a></li>
+    <li><a href="#" data-section="i2c">I2C</a></li>
+    <li><a href="#" data-section="gpio">GPIO</a></li>
+    </ul>
+    </li>
+    <li><a href="#" data-section="salir">Salir</a></li>
+    </ul>
+    </aside>
+
+    <main class="main-content" id="main-content">
+    <!-- Sección Inicio -->
+    <section id="inicio-section" class="content-section active">
+    <div class="resumen-container">
+    <h2>Resumen</h2>
+    <div class="resumen-info">
+    <div class="info-item">
+    <span class="info-label">ID:</span>
+    <span id="current-id" class="info-value">Cargando...</span>
+    </div>
+    <div class="info-item">
+    <span class="info-label">Canal:</span>
+    <span id="current-channel" class="info-value">Cargando...</span>
+    </div>
+    <div class="info-item">
+    <span class="info-label">WiFi:</span>
+    <span id="current-wifi" class="info-value">Cargando...</span>
+    </div>
+    </div>
+    </div>
+    </section>
+
+    <!-- Sección Datos -->
+    <section id="datos-section" class="content-section">
+    <div class="form-container">
+    <h2>Configuración LoRa</h2>
+    <form id="config-form">
+    <div class="form-group">
+    <label for="lora-id">ID LoRa:</label>
+    <input type="text" id="lora-id" name="lora-id" pattern="[A-Za-z0-9]{1,8}" title="Solo letras y números (sin ñ ni caracteres especiales)" required>
+    <small class="form-text">Máx 8 caracteres (solo letras y números)</small>
+    </div>
+    <div class="form-group">
+    <label for="lora-channel">Canal LoRa (0-8):</label>
+    <input type="number" id="lora-channel" name="lora-channel" min="0" max="8" required>
+    </div>
+    <div class="form-group">
+    <label for="wifi-enabled">Habilitar WiFi:</label>
+    <input type="checkbox" id="wifi-enabled" name="wifi-enabled">
+    </div>
+    <button type="submit" class="btn-submit">Guardar Configuración</button>
+    </form>
+    </div>
+    </section>
+
+    <!-- Sección Pantalla -->
+    <section id="pantalla-section" class="content-section">
+    <div class="funcion-container">
+    <h2>Configuración de Pantalla</h2>
+    <div class="btn-group">
+    <button id="activar-pantalla" class="btn-funcion">Activar</button>
+    <button id="apagar-pantalla" class="btn-funcion">Apagar</button>
+    <button id="prueba-pantalla" class="btn-funcion">Prueba</button>
+    </div>
+    </div>
+    </section>
+
+    <!-- Sección WiFi -->
+    <section id="wifi-section" class="content-section">
+    <div class="wifi-container">
+    <h2  style="color: white;"><i class="icon wifi-icon" ></i> Configuración WiFi</h2>
+
+    <div class="wifi-controls">
+    <div class="btn-group">
+    <button id="activar-wifi" class="btn-funcion">Activar WiFi</button>
+    <button id="apagar-wifi" class="btn-funcion">Apagar WiFi</button>
+    </div>
+
+    <div id="wifi-status" class="wifi-status">
+    <p  style="color: white;"><strong>Estado:</strong> No conectado</p>
+    </div>
+
+    <div class="wifi-scan-section">
+    <h3  style="color: white;">Redes Disponibles</h3>
+    <button id="scan-wifi" class="btn-scan">Escanear Redes</button>
+    <button id="refresh-wifi" class="btn-scan">Actualizar</button>
+
+    <div class="table-container">
+    <table id="wifi-table" class="wifi-table">
+    <tr>
+    <td colspan="4"  style="color: white;" >Presione el botón para escanear redes</td>
+    </tr>
+    </table>
+    </div>
+    </div>
+
+    <div class="wifi-saved-section">
+    <h3 style="color: white;" >Redes Guardadas</h3>
+    <div class="saved-actions">
+    <button id="show-saved" class="btn-scan">Mostrar Redes</button>
+    <button id="remove-all-wifi" class="btn-scan danger">Borrar Todas</button>
+    </div>
+
+    <div id="saved-networks" class="saved-networks-container">
+    <p>No se han cargado las redes guardadas</p>
+    </div>
+    </div>
+    </div>
+    </div>
+    </section>
+
+    <!-- Sección UART -->
+    <section id="uart-section" class="content-section">
+    <div class="funcion-container">
+    <h2>Configuración UART</h2>
+    <div class="btn-group">
+    <button id="activar-uart" class="btn-funcion">Activar</button>
+    <button id="apagar-uart" class="btn-funcion">Apagar</button>
+    </div>
+    </div>
+    </section>
+
+    <!-- Sección I2C -->
+    <section id="i2c-section" class="content-section">
+    <div class="funcion-container">
+    <h2>Configuración I2C</h2>
+    <div class="btn-group">
+    <button id="escaner-i2c" class="btn-funcion">Escaner</button>
+    <button id="desactivar-i2c" class="btn-funcion">Desactivar</button>
+    </div>
+    <div class="i2c-resultados">
+    <h4>Dispositivos I2C encontrados:</h4>
+    <div id="i2c-devices" class="devices-list"></div>
+    </div>
+    </div>
+    </section>
+
+    <!-- Sección GPIO -->
+    <section id="gpio-section" class="content-section">
+    <div class="funcion-container">
+    <h2>Configuración GPIO</h2>
+    <div class="gpio-controls">
+    <!-- Los controles GPIO se generarán dinámicamente con JS -->
+    </div>
+    </div>
+    </section>
+
+    <section id="salir-section" class="content-section">
+    <div class="funcion-container">
+    <h2>Salir del modo programación</h2>
+    <p>Esta acción reiniciará la tarjeta y saldrá del modo de programación.</p>
+    <button id="salir-reiniciar" class="btn danger-btn">Salir y Reiniciar</button>
+    <button id="cancelar-salir" class="btn">Cancelar</button>
+    </div>
+    </section>
+    </main>
+
+    <script src="Script.js"></script>
+    </body>
+    </html>
