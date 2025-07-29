@@ -5,7 +5,7 @@
 extern LoRaConfig configLora;
 Preferences preferences;
 
-// Frecuencias para la banda de 915 MHz
+// Frecuencias en el borde inferior de la banda ISM 433 MHz (433.05 MHz a 433.25 MHz)
 float canales[9] = {
-  915.0, 915.2, 915.4, 915.6, 915.8, 916.0, 916.2, 916.4, 916.6
+  433.05, 433.07, 433.09, 433.11, 433.13, 433.15, 433.17, 433.19, 433.21
 };

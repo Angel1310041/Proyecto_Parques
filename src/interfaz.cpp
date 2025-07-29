@@ -255,7 +255,7 @@ void endpointsMProg(void *pvParameters) {
   WiFi.scanDelete();
   });
 
-  // Conectar a WiFi
+  // Conectar a WiFi (modificado para limitar a 3 redes guardadas)
   server.on("/api/wifi/connect", HTTP_POST, []() {
   if (!configLora.WiFi) {
   server.send(200, "application/json", "{\"error\":\"WiFi desactivado\"}");
@@ -282,6 +282,33 @@ void endpointsMProg(void *pvParameters) {
 
   // Guardar la red si se especificó
   if (saveNetwork) {
+  // Contar redes guardadas
+  int count = 0;
+  for (int i = 0; i < 3; i++) {
+  if (strlen(redes[i].ssid) > 0) count++;
+  // Si la red ya existe, permitir actualizar la contraseña
+  if (strcmp(redes[i].ssid, ssid.c_str()) == 0) {
+      break; // Permitimos actualizar
+  }
+  }
+  // Si ya hay 3 y la red no existe, rechazar
+  bool exists = false;
+  for (int i = 0; i < 3; i++) {
+  if (strcmp(redes[i].ssid, ssid.c_str()) == 0) {
+      exists = true;
+      break;
+  }
+  }
+  if (count >= 3 && !exists) {
+  DynamicJsonDocument responseDoc(128);
+  responseDoc["success"] = false;
+  responseDoc["message"] = "No se pueden guardar más de 3 redes WiFi";
+  String response;
+  serializeJson(responseDoc, response);
+  server.send(200, "application/json", response);
+  return;
+  }
+  // Si hay espacio o la red ya existe, guardar normalmente
   if (ManejoEEPROM::guardarWiFiCredenciales(ssid.c_str(), password.c_str())) {
   imprimirSerial(String("Red guardada: ") + ssid, 'g');
   } else {
@@ -307,7 +334,7 @@ void endpointsMProg(void *pvParameters) {
   JsonArray savedNetworks = responseDoc.createNestedArray("savedNetworks");
   for (int i = 0; i < 3; i++) {
   if (strlen(redes[i].ssid) > 0) {
-  savedNetworks.add(redes[i].ssid);
+      savedNetworks.add(redes[i].ssid);
   }
   }
   } else {
@@ -482,87 +509,155 @@ server.on("/api/display", HTTP_POST, []() {
 });
 
   // Control UART
-  server.on("/api/uart", HTTP_POST, []() {
-  if (!server.hasArg("plain")) {
-    server.send(400, "text/plain", "Bad Request");
-    return;
-  }
+// Control UART
+server.on("/api/uart", HTTP_POST, []() {
+    if (!server.hasArg("plain")) {
+        server.send(400, "text/plain", "Bad Request");
+        return;
+    }
 
-  String body = server.arg("plain");
-  DynamicJsonDocument doc(128);
-  deserializeJson(doc, body);
+    String body = server.arg("plain");
+    DynamicJsonDocument doc(128);
+    deserializeJson(doc, body);
 
- configLora.UART = doc["state"] == "1";
-  ManejoEEPROM::guardarTarjetaConfigEEPROM();
+    bool nuevoEstado = doc["state"] == "1";
+    configLora.UART = nuevoEstado;
+    ManejoEEPROM::guardarTarjetaConfigEEPROM();
 
-  ManejoComunicacion::initUART();
+    // Solo mostrar un mensaje cuando se desactiva la UART
+    if (!nuevoEstado) {
+        imprimirSerial("UART inhabilitado", 'y');
+    }
 
-  DynamicJsonDocument responseDoc(128);
-  responseDoc["success"] = true;
-  responseDoc["uart"] = configLora.UART;
-  
-  String response;
-  serializeJson(responseDoc, response);
-  server.send(200, "application/json", response);
+    ManejoComunicacion::initUART();
+
+    DynamicJsonDocument responseDoc(128);
+    responseDoc["success"] = true;
+    responseDoc["uart"] = configLora.UART;
+    
+    String response;
+    serializeJson(responseDoc, response);
+    server.send(200, "application/json", response);
+});
+  // Control I2C
+ // Endpoint para control I2C
+server.on("/api/i2c", HTTP_POST, []() {
+    if (!server.hasArg("plain")) {
+        server.send(400, "text/plain", "Bad Request");
+        return;
+    }
+
+    String body = server.arg("plain");
+    DynamicJsonDocument doc(128);
+    deserializeJson(doc, body);
+
+    bool enable = doc["state"] == "1";
+    configLora.I2C = enable;
+    ManejoEEPROM::guardarTarjetaConfigEEPROM();
+
+    if (enable) {
+        Wire.begin(SDA, SCL); // Reemplaza con tus pines
+        Wire.setClock(100000); // 100 kHz
+        imprimirSerial("I2C activado", 'g');
+    } else {
+        Wire.end();
+        imprimirSerial("I2C desactivado", 'y');
+    }
+
+    DynamicJsonDocument response(128);
+    response["success"] = true;
+    response["i2c_enabled"] = configLora.I2C;
+    
+    String jsonResponse;
+    serializeJson(response, jsonResponse);
+    server.send(200, "application/json", jsonResponse);
 });
 
-  // Control I2C
-  server.on("/api/i2c", HTTP_POST, []() {
-  if (!server.hasArg("plain")) {
-  server.send(400, "text/plain", "Bad Request");
-  return;
-  }
 
-  String body = server.arg("plain");
-  DynamicJsonDocument doc(128);
-  deserializeJson(doc, body);
+// Escaneo I2C mejorado con mensaje de resultado
+    server.on("/api/i2c/scan", HTTP_GET, []() {
+        if (!configLora.I2C) {
+            server.send(200, "application/json", "{\"error\":\"I2C desactivado\"}");
+            return;
+        }
 
-  String state = doc["state"].as<String>();
-  configLora.I2C = (state == "1");
+        DynamicJsonDocument doc(1024);
+        JsonArray dispositivos = doc.createNestedArray("dispositivos");
+        JsonArray direcciones = doc.createNestedArray("direcciones");
 
-  ManejoEEPROM::guardarTarjetaConfigEEPROM();
-  ManejoComunicacion::initI2C();
+        // Escanear bus I2C
+        byte error, address;
+        int nDevices = 0;
 
-  DynamicJsonDocument responseDoc(128);
-  responseDoc["success"] = true;
-  responseDoc["message"] = "I2C " + String(configLora.I2C ? "activado" : "desactivado");
-  String response;
-  serializeJson(responseDoc, response);
-  server.send(200, "application/json", response);
-  });
+        for (address = 1; address < 127; address++) {
+            Wire.beginTransmission(address);
+            error = Wire.endTransmission();
 
-  // Escaneo I2C
-  server.on("/api/i2c/scan", HTTP_GET, []() {
-  if (!configLora.I2C) {
-  server.send(200, "application/json", "{\"error\":\"I2C desactivado\"}");
-  return;
-  }
+            if (error == 0) {
+                JsonObject dispositivo = dispositivos.createNestedObject();
+                dispositivo["direccion"] = "0x" + String(address, HEX);
+                dispositivo["decimal"] = address;
 
-  DynamicJsonDocument doc(512);
-  JsonArray dispositivos = doc.createNestedArray("dispositivos");
+                // Identificar dispositivos comunes
+                if (address == 0x3C || address == 0x3D) {
+                    dispositivo["tipo"] = "Pantalla OLED";
+                } else if (address == 0x68) {
+                    dispositivo["tipo"] = "Reloj RTC (DS3231)";
+                } else if (address == 0x76 || address == 0x77) {
+                    dispositivo["tipo"] = "Sensor BME280/BMP280";
+                } else if (address >= 0x20 && address <= 0x27) {
+                    dispositivo["tipo"] = "Expansor GPIO (MCP23017)";
+                } else if (address == 0x40) {
+                    dispositivo["tipo"] = "Sensor HTU21D/PCA9685";
+                } else {
+                    dispositivo["tipo"] = "Desconocido";
+                }
+                direcciones.add("0x" + String(address, HEX));
+                nDevices++;
+            }
+            delay(10);
+        }
 
-  byte error, address;
-  for (address = 1; address < 127; address++) {
-  Wire.beginTransmission(address);
-  error = Wire.endTransmission();
+        // Mensaje según resultado
+        if (nDevices == 0) {
+            doc["mensaje"] = "No se encontró ningún dispositivo I2C en el bus.";
+        } else {
+            doc["mensaje"] = String("Se encontraron ") + nDevices + " dispositivo(s) I2C: ";
+            // Agrega las direcciones encontradas al mensaje
+            String lista = "";
+            for (JsonVariant dir : direcciones) {
+                lista += dir.as<String>() + " ";
+            }
+            doc["mensaje"] = doc["mensaje"].as<String>() + lista;
+        }
 
-  if (error == 0) {
-  JsonObject dispositivo = dispositivos.createNestedObject();
-  dispositivo["direccion"] = "0x" + String(address, HEX);
+        // Agregar información de red
+        JsonObject red = doc.createNestedObject("red");
+        if (WiFi.status() == WL_CONNECTED) {
+            red["conectado"] = true;
+            red["ssid"] = WiFi.SSID();
+            red["ip_local"] = WiFi.localIP().toString();
+            red["mac"] = WiFi.macAddress();
+            red["rssi"] = WiFi.RSSI();
+            red["estado"] = "Conectado";
+        } else {
+            red["conectado"] = false;
+            red["estado"] = "Desconectado";
+        }
 
-  if (address == 0x3C) dispositivo["tipo"] = "Pantalla OLED";
-  else if (address == 0x68) dispositivo["tipo"] = "Reloj RTC";
-  else if (address == 0x76) dispositivo["tipo"] = "Sensor BME280";
-  else dispositivo["tipo"] = "Desconocido";
-  }
-  delay(1);
-  }
+        // Agregar información del AP
+        JsonObject ap = doc.createNestedObject("access_point");
+        ap["activo"] = WiFi.softAPgetStationNum() > 0;
+        ap["ip"] = WiFi.softAPIP().toString();
+        ap["estaciones_conectadas"] = WiFi.softAPgetStationNum();
 
-  String respuesta;
-  serializeJson(doc, respuesta);
-  server.send(200, "application/json", respuesta);
-  });
+        doc["dispositivos_encontrados"] = nDevices;
+        doc["status"] = "Escaneo completado";
 
+        String respuesta;
+        serializeJson(doc, respuesta);
+        server.send(200, "application/json", respuesta);
+    });
   // Reinicio del dispositivo
   server.on("/api/reboot", HTTP_POST, []() {
   server.send(200, "application/json", "{\"success\":true,\"message\":\"Reiniciando dispositivo...\"}");

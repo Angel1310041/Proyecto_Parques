@@ -1,4 +1,4 @@
-    document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
     // Variables globales
     const apiUrl = 'http://' + window.location.hostname + '/api';
     let currentConfig = {};
@@ -204,8 +204,16 @@
     setupButton('activar-uart', () => sendUartCommand('1'));
     setupButton('apagar-uart', () => sendUartCommand('0'));
 
-    setupButton('escaner-i2c', scanI2CDevices);
-    setupButton('desactivar-i2c', () => sendI2CCommand('0'));
+    setupButton('activar-i2c', () => sendI2CCommand('1')); // Solo activa el bus I2C
+    setupButton('escaner-i2c', scanI2CDevices);            // Solo escanea (requiere I2C activo)
+    setupButton('desactivar-i2c', apagarI2C);              // Apaga I2C y limpia lista
+    
+    // Nueva función para apagar I2C y limpiar la lista de dispositivos
+function apagarI2C() {
+    sendI2CCommand('0'); // Desactiva el bus I2C
+    i2cDevicesList.innerHTML = '<li class="no-devices">I2C desactivado</li>'; // Limpia la lista
+}
+
 
     // --- BOTÓN SALIR/REINICIAR ---
     setupButton('salir-reiniciar', async () => {
@@ -571,10 +579,11 @@
     </td>
     `;
 
-    // Evento para el botón de favorito
-    row.querySelector('.favorite-btn').addEventListener('click', () => {
-    setFavoriteNetwork(network.ssid);
-    });
+// Evento para el botón de favorito
+row.querySelector('.favorite-btn').addEventListener('click', async () => {
+    await setFavoriteNetwork(network.ssid);
+    // showSavedNetworks(); // Ya no es necesario aquí, porque setFavoriteNetwork lo hace
+});
 
     tbody.appendChild(row);
     });
@@ -606,21 +615,21 @@
     });
     }
 
-    async function setFavoriteNetwork(ssid) {
+async function setFavoriteNetwork(ssid) {
     try {
-    const response = await fetch(`${apiUrl}/wifi/favorite`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ssid })
-    });
-    const data = await response.json();
-    if (!data.success) throw new Error(data.message || 'Error al marcar favorita');
-    showAlert('success', `Red "${ssid}" marcada como favorita`);
-    showSavedNetworks(); // Refrescar la lista
+        const response = await fetch(`${apiUrl}/wifi/favorite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ssid })
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Error al marcar favorita');
+        showAlert('success', `Red "${ssid}" marcada como favorita`);
+        showSavedNetworks(); // Refrescar la lista solo aquí
     } catch (error) {
-    showAlert('error', `Error al marcar favorita: ${error.message}`);
+        showAlert('error', `Error al marcar favorita: ${error.message}`);
     }
-    }
+}
 
     async function connectToSavedNetwork(ssid) {
     try {
@@ -771,27 +780,32 @@ setupButton('prueba-pantalla', sendDisplayTestCommand);
     }
     }
 
-    async function scanI2CDevices() {
+ async function scanI2CDevices() {
+    if (!currentConfig.I2C) {
+        showAlert('error', 'Primero debes activar el I2C');
+        return;
+    }
+
     i2cDevicesList.innerHTML = '<li class="loading">Buscando dispositivos I2C...</li>';
 
     try {
-    const response = await fetch(`${apiUrl}/i2c/scan`);
-    const data = await response.json();
+        const response = await fetch(`${apiUrl}/i2c/scan`);
+        const data = await response.json();
 
-    if (data.error) {
-    i2cDevicesList.innerHTML = `<li class="error">${data.error}</li>`;
-    } else if (data.devices && data.devices.length > 0) {
-    renderI2CDevices(data.devices);
-    } else {
-    i2cDevicesList.innerHTML = '<li class="no-devices">No se encontraron dispositivos I2C</li>';
-    }
-
-    currentConfig.I2C = true;
-    updateButtonStates();
+        if (data.error) {
+            i2cDevicesList.innerHTML = `<li class="error">${data.error}</li>`;
+        } else if (data.devices && data.devices.length > 0) {
+            renderI2CDevices(data.devices);
+        } else {
+            i2cDevicesList.innerHTML = '<li class="no-devices">No se encontraron dispositivos I2C</li>';
+        }
+        // No modificar currentConfig.I2C aquí, solo en sendI2CCommand
+        updateButtonStates();
     } catch (error) {
-    i2cDevicesList.innerHTML = `<li class="error">Error: ${error.message}</li>`;
+        i2cDevicesList.innerHTML = `<li class="error">Error: ${error.message}</li>`;
     }
-    }
+}
+
 
     function renderI2CDevices(devices) {
     i2cDevicesList.innerHTML = '';
@@ -807,76 +821,83 @@ setupButton('prueba-pantalla', sendDisplayTestCommand);
     });
     }
 
-    async function sendI2CCommand(state) {
+async function sendI2CCommand(state) {
     try {
-    const response = await fetch(`${apiUrl}/i2c`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ state })
-    });
+        const response = await fetch(`${apiUrl}/i2c`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state })
+        });
 
-    const data = await response.json();
+        const data = await response.json();
 
-    if (data.success) {
-    showAlert('success', `I2C ${state === '1' ? 'activado' : 'desactivado'}`);
-    currentConfig.I2C = (state === '1');
-    updateButtonStates();
+        if (data.success) {
+            showAlert('success', `I2C ${state === '1' ? 'activado' : 'desactivado'}`);
+            currentConfig.I2C = (state === '1');
+            updateButtonStates();
 
-    if (state === '0') {
-    i2cDevicesList.innerHTML = '<li class="no-devices">I2C desactivado</li>';
-    }
-    } else {
-    throw new Error(data.message || 'Error desconocido');
-    }
+            // Solo limpiar la lista si se apaga
+            if (state === '0') {
+                i2cDevicesList.innerHTML = '<li class="no-devices">I2C desactivado</li>';
+            }
+        } else {
+            throw new Error(data.message || 'Error desconocido');
+        }
     } catch (error) {
-    showError('Error al controlar I2C:', error);
+        showError('Error al controlar I2C:', error);
     }
-    }
+}
 
-    // Restricciones en tiempo real para los campos de ID y Canal
-    function setupInputRestrictions() {
-    // ID: Solo letras y números, sin ñ, máximo 3 caracteres, no '000'
+function setupInputRestrictions() {
+    // ID: Solo letras mayúsculas y números, sin ñ, máximo 3 caracteres, no '000'
     loraIdInput.addEventListener('input', function(e) {
-    let value = this.value
-    .replace(/[^A-Za-z0-9]/g, '') // Solo letras y números
-    .replace(/ñ|Ñ/g, '');         // Elimina ñ/Ñ si se cuela
-    value = value.substring(0, 3);     // Máximo 3 caracteres
+        let value = this.value
+            .replace(/[^A-Za-z0-9]/g, '') // Solo letras y números
+            .replace(/ñ|Ñ/g, '')          // Elimina ñ/Ñ si se cuela
+            .toUpperCase();               // Convierte todo a mayúsculas
+        value = value.substring(0, 3);    // Máximo 3 caracteres
 
-    // No permitir '000'
-    if (value.toUpperCase() === '000') {
-    value = '';
-    }
+        // No permitir '000'
+        if (value === '000') {
+            value = '';
+        }
 
-    this.value = value;
+        this.value = value;
     });
 
     loraIdInput.addEventListener('paste', function(e) {
-    let paste = (e.clipboardData || window.clipboardData).getData('text');
-    paste = paste.replace(/[^A-Za-z0-9]/g, '').replace(/ñ|Ñ/g, '').substring(0, 3);
-    if (paste.toUpperCase() === '000') {
-    e.preventDefault();
-    this.value = '';
-    }
+        let paste = (e.clipboardData || window.clipboardData).getData('text');
+        paste = paste.replace(/[^A-Za-z0-9]/g, '').replace(/ñ|Ñ/g, '').toUpperCase().substring(0, 3);
+        if (paste === '000') {
+            e.preventDefault();
+            this.value = '';
+        } else {
+            e.preventDefault();
+            this.value = paste;
+        }
     });
 
     // Canal: Solo números del 0 al 8
     loraChannelInput.addEventListener('input', function(e) {
-    let value = this.value.replace(/[^0-9]/g, '');
-    if (value.length > 1) value = value[0]; // Solo un dígito
-    if (value !== '' && (parseInt(value) < 0 || parseInt(value) > 8)) {
-    value = '';
-    }
-    this.value = value;
+        let value = this.value.replace(/[^0-9]/g, '');
+        if (value.length > 1) value = value[0]; // Solo un dígito
+        if (value !== '' && (parseInt(value) < 0 || parseInt(value) > 8)) {
+            value = '';
+        }
+        this.value = value;
     });
 
     loraChannelInput.addEventListener('paste', function(e) {
-    let paste = (e.clipboardData || window.clipboardData).getData('text');
-    if (!/^[0-8]$/.test(paste)) {
-    e.preventDefault();
-    this.value = '';
-    }
+        let paste = (e.clipboardData || window.clipboardData).getData('text');
+        if (!/^[0-8]$/.test(paste)) {
+            e.preventDefault();
+            this.value = '';
+        } else {
+            e.preventDefault();
+            this.value = paste;
+        }
     });
-    }
+}
 
     // Funciones de utilidad
     function showAlert(type, message) {
