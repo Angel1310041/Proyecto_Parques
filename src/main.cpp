@@ -10,7 +10,7 @@
 #include "interfaz.h"
 
 SX1262 lora = new Module(LORA_CS, LORA_DIO1, LORA_RST, LORA_BUSY);
-String Version = "3.2.1.2";
+String Version = "3.3.1.1";
 volatile bool receivedFlag = false;
 bool modoProgramacion = false;
 
