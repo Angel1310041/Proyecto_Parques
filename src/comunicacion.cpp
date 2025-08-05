@@ -336,8 +336,21 @@ String ManejoComunicacion::leerSerial() {
 }
 
 void ManejoComunicacion::envioMsjLoRa(String comandoLoRa) {
-    String IDLoraRecibido = comandoLoRa.substring(0, 3); 
-    imprimirSerial("Enviando comando " + comandoLoRa + " a lora con el ID " + IDLoraRecibido);
+    // comandoLoRa debe tener el formato: DEST@L@mensaje@valorAleatorio@
+    // Extraer destino
+    String destino = comandoLoRa.substring(0, 3);
+    String msgID = String(configLora.IDLora) + "-" + String(millis());
+    char paquete[256];
+    snprintf(paquete, sizeof(paquete), "ORIG:%s|DEST:%s|MSG:%s|HOP:%s|CANAL:%d|ID:%s",
+        configLora.IDLora, destino.c_str(), comandoLoRa.c_str(), destino.c_str(), configLora.Canal, msgID.c_str());
+    imprimirSerial("Enviando por LoRa: " + String(paquete), 'c');
+    int resultado = lora.transmit(paquete);
+    if (resultado == RADIOLIB_ERR_NONE) {
+        imprimirSerial("Respuesta enviada correctamente por LoRa.", 'g');
+    } else {
+        imprimirSerial("Error al enviar respuesta por LoRa: " + String(resultado), 'r');
+    }
+    lora.startReceive();
 }
 
 void ManejoComunicacion::enviarRespuestaRemota(const String& idDestino, char red, const String& mensaje, const String& valorAleatorio) {
@@ -417,6 +430,8 @@ void ManejoComunicacion::procesarComando(const String &comandoRecibido, String &
                         respuesta = "Formato ID invalido";
                     }
                 }
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                return;
             } else if (comandoProcesar.startsWith("CH")) {
                 accion = comandoProcesar.substring(2, 3);
                 if (accion == "L") {
@@ -432,19 +447,25 @@ void ManejoComunicacion::procesarComando(const String &comandoRecibido, String &
                             ManejoEEPROM::guardarTarjetaConfigEEPROM();
                             lora.begin(canales[configLora.Canal]); 
                             respuesta = "Canal cambiado a: " + prefix1;
+                            ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
                             esp_restart(); 
                         } else {
                             respuesta = "Canal fuera de rango";
                             imprimirSerial("Canal especificado fuera de rango: " + prefix1, 'r');
+                            ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
                         }
                     } else {
                         imprimirSerial("Formato de comando de canal inválido", 'r');
                         respuesta = "Formato de comando de canal inválido";
+                        ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
                     }
                 }
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                return;
             } else if(comandoProcesar.startsWith("RGB>")){
                 String color = comandoProcesar.substring(4); // Extrae el color después de '>'
                 manejarComandoRGB(color, respuesta);
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
                 return;
             } else if (comandoProcesar.startsWith("SCR")) {
                 accion = comandoProcesar.substring(4, 5);
@@ -462,118 +483,118 @@ void ManejoComunicacion::procesarComando(const String &comandoRecibido, String &
                     configurarDisplay(true);
                     respuesta = "Pantalla habilitada";
                 }
-            }else if(comandoProcesar.startsWith("R") && comandoProcesar.length() == 4) {
-        int reflectorID = comandoProcesar.substring(1, 2).toInt(); // 0=Todos, 1-4
-        int funcion = comandoProcesar.substring(2, 4).toInt();     // 01-24
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                return;
+            } else if(comandoProcesar.startsWith("R") && comandoProcesar.length() == 4) {
+                int reflectorID = comandoProcesar.substring(1, 2).toInt(); // 0=Todos, 1-4
+                int funcion = comandoProcesar.substring(2, 4).toInt();     // 01-24
 
-        imprimirSerial("Comando de Reflector recibido. ID: " + String(reflectorID) + ", Funcion: " + String(funcion), 'g');
-        
-        // Validar ID del reflector
-        if (reflectorID < 0 || reflectorID > NUM_REFLECTORS) {
-            respuesta = "ERR: ID de reflector fuera de rango. Usar 0 (todos) o 1-" + String(NUM_REFLECTORS);
-            imprimirSerial(respuesta, 'r');
-            return;
-        }
+                imprimirSerial("Comando de Reflector recibido. ID: " + String(reflectorID) + ", Funcion: " + String(funcion), 'g');
+                
+                // Validar ID del reflector
+                if (reflectorID < 0 || reflectorID > NUM_REFLECTORS) {
+                    respuesta = "ERR: ID de reflector fuera de rango. Usar 0 (todos) o 1-" + String(NUM_REFLECTORS);
+                    imprimirSerial(respuesta, 'r');
+                    ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                    return;
+                }
 
-        // Validar índice de función
-        if (funcion < 1 || funcion > NUM_REFLECTOR_FUNCTIONS) {
-            respuesta = "ERR: Indice de funcion de reflector fuera de rango (01-" + String(NUM_REFLECTOR_FUNCTIONS) + ").";
-            imprimirSerial(respuesta, 'r');
-            return;
-        }
+                // Validar índice de función
+                if (funcion < 1 || funcion > NUM_REFLECTOR_FUNCTIONS) {
+                    respuesta = "ERR: Indice de funcion de reflector fuera de rango (01-" + String(NUM_REFLECTOR_FUNCTIONS) + ").";
+                    imprimirSerial(respuesta, 'r');
+                    ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                    return;
+                }
 
-        uint64_t irCode = reflector_codes[funcion - 1];
+                uint64_t irCode = reflector_codes[funcion - 1];
 
-        if (reflectorID == 0) { // Todos los reflectores
-            for (int i = 0; i < NUM_REFLECTORS; ++i) {
-                irsenders[i]->sendNEC(irCode, 32);
-                delay(50);
-                imprimirSerial("Enviando codigo IR " + String(irCode, HEX) + " a reflector " + String(i + 1), 'g');
-            }
-            respuesta = "Comando IR " + String(irCode, HEX) + " enviado a TODOS los reflectores.";
-        } else {
-            irsenders[reflectorID - 1]->sendNEC(irCode, 32);
-            respuesta = "Comando IR " + String(irCode, HEX) + " enviado a reflector " + String(reflectorID);
-            imprimirSerial(respuesta, 'g');
-        }
-        return;
-    } else if (comandoProcesar.startsWith("OUT>")) {
-        // Separar los parámetros
-        int primerMayor = comandoProcesar.indexOf('>', 4); // Busca el segundo '>'
-        if (primerMayor == -1) {
-            respuesta = "ERR: Formato OUT invalido. Usa: OUT>{1/2}>{0/1/L}";
-            imprimirSerial(respuesta, 'r');
-            return;
-        }
-        String salidaStr = comandoProcesar.substring(4, primerMayor); // '1' o '2'
-        String accionStr = comandoProcesar.substring(primerMayor + 1); // '0', '1' o 'L'
+                if (reflectorID == 0) { // Todos los reflectores
+                    for (int i = 0; i < NUM_REFLECTORS; ++i) {
+                        irsenders[i]->sendNEC(irCode, 32);
+                        delay(50);
+                        imprimirSerial("Enviando codigo IR " + String(irCode, HEX) + " a reflector " + String(i + 1), 'g');
+                    }
+                    respuesta = "Comando IR " + String(irCode, HEX) + " enviado a TODOS los reflectores.";
+                } else {
+                    irsenders[reflectorID - 1]->sendNEC(irCode, 32);
+                    respuesta = "Comando IR " + String(irCode, HEX) + " enviado a reflector " + String(reflectorID);
+                    imprimirSerial(respuesta, 'g');
+                }
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                return;
+            } else if (comandoProcesar.startsWith("OUT>")) {
+                int primerMayor = comandoProcesar.indexOf('>', 4); // Busca el segundo '>'
+                if (primerMayor == -1) {
+                    respuesta = "ERR: Formato OUT invalido. Usa: OUT>{1/2}>{0/1/L}";
+                    imprimirSerial(respuesta, 'r');
+                    ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                    return;
+                }
+                String salidaStr = comandoProcesar.substring(4, primerMayor); // '1' o '2'
+                String accionStr = comandoProcesar.substring(primerMayor + 1); // '0', '1' o 'L'
 
-        int pin = -1;
-        bool isIO1 = false, isIO2 = false;
+                int pin = -1;
+                bool isIO1 = false, isIO2 = false;
 
-        if (salidaStr == "1") { pin = PIN_IO1; isIO1 = true; }
-        else if (salidaStr == "2") { pin = PIN_IO2; isIO2 = true; }
-        else {
-            respuesta = "ERR: Salida no reconocida: " + salidaStr + ". Usa 1 o 2.";
-            imprimirSerial(respuesta, 'r');
-            return;
-        }
+                if (salidaStr == "1") { pin = PIN_IO1; isIO1 = true; }
+                else if (salidaStr == "2") { pin = PIN_IO2; isIO2 = true; }
+                else {
+                    respuesta = "ERR: Salida no reconocida: " + salidaStr + ". Usa 1 o 2.";
+                    imprimirSerial(respuesta, 'r');
+                    ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                    return;
+                }
 
-        if (accionStr == "1") {
-            pinMode(pin, OUTPUT);
-            digitalWrite(pin, HIGH);
-            respuesta = "Pin IO" + salidaStr + " habilitado (HIGH)";
-            imprimirSerial(respuesta, 'g');
-            // Inicia timer correspondiente
-            if (isIO1) {
-                io1TimerStart = millis();
-                io1TimerActive = true;
-            } else if (isIO2) {
-                io2TimerStart = millis();
-                io2TimerActive = true;
-            }
-            return;
-        } else if (accionStr == "0") {
-            pinMode(pin, OUTPUT);
-            digitalWrite(pin, LOW);
-            respuesta = "Pin IO" + salidaStr + " deshabilitado (LOW)";
-            imprimirSerial(respuesta, 'y');
-            // Detiene y reinicia timer correspondiente
-            if (isIO1) {
-                io1TimerActive = false;
-                io1TimerStart = 0;
-            } else if (isIO2) {
-                io2TimerActive = false;
-                io2TimerStart = 0;
-            }
-            return;
-        } else if (accionStr == "L") {
-            pinMode(pin, INPUT);
-            int estado = digitalRead(pin);
-            respuesta = "Pin IO" + salidaStr + " estado: " + String(estado ? "HABILITADO (HIGH)" : "DESHABILITADO (LOW)");
-            imprimirSerial(respuesta, 'c');
-            return;
-        } else {
-            respuesta = "ERR: Acción no reconocida: " + accionStr + ". Usa 0, 1 o L.";
-            imprimirSerial(respuesta, 'r');
-            return;
-        }
-    }else if(comandoProcesar == "INFO") {
-        // Armar respuesta de estado
-        String estado = "ID:" + String(configLora.IDLora) +
-                        ",CANAL:" + String(configLora.Canal) + 
-                        //",WIFI:" + String(configLora.WiFi ? "ON" : "OFF") + //cambiar por la pantalla
-                        ",UART:" + String(configLora.UART ? "ON" : "OFF") +
-                        ",I2C:" + String(configLora.I2C ? "ON" : "OFF") +
-                        ",DEBUG:" + String(configLora.DEBUG ? "ON" : "OFF")+
-                        ",PANTALLA:" + String(configLora.Pantalla ? "ON" : "OFF") +
-                        ",VERSION:" + Version;
+                if (accionStr == "1") {
+                    pinMode(pin, OUTPUT);
+                    digitalWrite(pin, HIGH);
+                    respuesta = "Pin IO" + salidaStr + " habilitado (HIGH)";
+                    imprimirSerial(respuesta, 'g');
+                    if (isIO1) {
+                        io1TimerStart = millis();
+                        io1TimerActive = true;
+                    } else if (isIO2) {
+                        io2TimerStart = millis();
+                        io2TimerActive = true;
+                    }
+                } else if (accionStr == "0") {
+                    pinMode(pin, OUTPUT);
+                    digitalWrite(pin, LOW);
+                    respuesta = "Pin IO" + salidaStr + " deshabilitado (LOW)";
+                    imprimirSerial(respuesta, 'y');
+                    if (isIO1) {
+                        io1TimerActive = false;
+                        io1TimerStart = 0;
+                    } else if (isIO2) {
+                        io2TimerActive = false;
+                        io2TimerStart = 0;
+                    }
+                } else if (accionStr == "L") {
+                    pinMode(pin, INPUT);
+                    int estado = digitalRead(pin);
+                    respuesta = "Pin IO" + salidaStr + " estado: " + String(estado ? "HABILITADO (HIGH)" : "DESHABILITADO (LOW)");
+                    imprimirSerial(respuesta, 'c');
+                } else {
+                    respuesta = "ERR: Acción no reconocida: " + accionStr + ". Usa 0, 1 o L.";
+                    imprimirSerial(respuesta, 'r');
+                }
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                return;
+            } else if(comandoProcesar == "INFO") {
+                String estado = "ID:" + String(configLora.IDLora) +
+                                ",CANAL:" + String(configLora.Canal) + 
+                                ",UART:" + String(configLora.UART ? "ON" : "OFF") +
+                                ",I2C:" + String(configLora.I2C ? "ON" : "OFF") +
+                                ",DEBUG:" + String(configLora.DEBUG ? "ON" : "OFF")+
+                                ",PANTALLA:" + String(configLora.Pantalla ? "ON" : "OFF") +
+                                ",VERSION:" + Version;
 
-        imprimirSerial("Enviando estado de la tarjeta: " + estado, 'c');
-        ManejoComunicacion::enviarRespuestaRemota(comandoDestinoID, red, estado, valorAleatorio);
-        respuesta = "Estado enviado a " + comandoDestinoID + ": " + estado;
-        return;
-    } else if (comandoProcesar.startsWith("I2C")) {
+                imprimirSerial("Enviando estado de la tarjeta: " + estado, 'c');
+                ManejoComunicacion::enviarRespuestaRemota("000", red, estado, valorAleatorio);
+                respuesta = "Estado enviado a TODOS (broadcast): " + estado;
+                return;
+            } else if (comandoProcesar.startsWith("I2C")) {
                 accion = comandoProcesar.substring(4, 5);
                 if (accion == "L") {
                     respuesta = "I2C " + String(configLora.I2C ? "activada" : "desactivada");
@@ -592,6 +613,8 @@ void ManejoComunicacion::procesarComando(const String &comandoRecibido, String &
                     ManejoComunicacion::initI2C(); 
                     respuesta = "I2C activada";
                 }
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                return;
             } else if (comandoProcesar.startsWith("SCANI2C")) {
                 if (configLora.I2C) {
                     imprimirSerial("Escaneando el puerto I2C en busca de dispositivos...", 'y');
@@ -602,6 +625,8 @@ void ManejoComunicacion::procesarComando(const String &comandoRecibido, String &
                     imprimirSerial("La comunicacion I2C esta desactivada, no se puede escanear", 'r');
                     respuesta = "I2C desactivada, no se puede escanear";
                 }
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                return;
             } else if (comandoProcesar.startsWith("UART")) {
                 accion = comandoProcesar.substring(5, 6);
                 if (accion == "L") {
@@ -621,33 +646,55 @@ void ManejoComunicacion::procesarComando(const String &comandoRecibido, String &
                     ManejoComunicacion::initUART(); 
                     respuesta = "UART activada";
                 }
-            }  else if (comandoProcesar.startsWith("FORMAT")) {
-                imprimirSerial("Reiniciando la tarjeta LoRa...");
-                respuesta = "Reiniciando la tarjeta LoRa...";
-                delay(1000);
-                ManejoEEPROM::borrarTarjetaConfigEEPROM(); 
-                esp_restart();
-            } else if(comandoProcesar.startsWith("RESET")){
-                imprimirSerial("Reiniciando el sistema...");
-                respuesta = "Reiniciando el sistema...";
-                delay(1000);
-                esp_restart();
-            } else if (comandoProcesar.startsWith("MPROG")) {
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                return;
+            }else if (comandoProcesar.startsWith("FORMAT")) {
+    imprimirSerial("Reiniciando la tarjeta LoRa...");
+    respuesta = "Reiniciando la tarjeta LoRa...";
+    ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+
+    // Espera 1 segundo pero reseteando el watchdog
+    for (int i = 0; i < 10; ++i) {
+        delay(100);
+        esp_task_wdt_reset();
+    }
+    ManejoEEPROM::borrarTarjetaConfigEEPROM(); 
+    esp_restart();
+    return;
+} else if(comandoProcesar.startsWith("RESET")){
+    imprimirSerial("Reiniciando el sistema...");
+    respuesta = "Reiniciando el sistema...";
+    ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+
+    for (int i = 0; i < 10; ++i) {
+        delay(100);
+        esp_task_wdt_reset();
+    }
+    esp_restart();
+    return;
+} else if (comandoProcesar.startsWith("MPROG")) {
                 imprimirSerial("Entrando a modo programacion a traves de comando...");
                 if (!modoProgramacion) { 
                     Interfaz::entrarModoProgramacion(); 
                 }
                 respuesta = "Entrando a modo programación";
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                return;
             } else {
                 respuesta = "ERR: Comando LoRa desconocido";
                 imprimirSerial("Comando LoRa desconocido: " + comandoProcesar, 'r');
+                ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+                return;
             }
-        }else if (red == 'V') {
-            imprimirSerial("Comando para red Vecinal (UART).", 'g');
-            String comandoVecinal = comandoProcesar + ">" + valorAleatorio;
-            ManejoComunicacion::escribirVecinal(comandoVecinal); 
-            respuesta = "Comando enviado a vecinal: " + comandoVecinal;
-        } else {
+        } else if (red == 'V') {
+    imprimirSerial("Comando para red Vecinal (UART).", 'g');
+    String comandoVecinal = comandoProcesar + ">" + valorAleatorio;
+    ManejoComunicacion::escribirVecinal(comandoVecinal); 
+    respuesta = "Comando enviado a vecinal: " + comandoVecinal;
+    // Envía la respuesta por UART a todos (broadcast)
+    ManejoComunicacion::enviarRespuestaRemota("000", red, respuesta, valorAleatorio);
+    return;
+}else {
             respuesta = "ERR: Red desconocida";
             imprimirSerial("Red desconocida: " + String(red), 'r');
         }
